@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { origDef, Point } from './grid';
+import { GridCorners, Point } from './grid';
 
 /**
  * Magic value to indicate there is no value
@@ -17,7 +17,7 @@ const rr = [
 
 class GridTool {
     getCell(gridX: number, gridY: number): Array<Point> {
-        return rr.map((math) => origDef[gridX + math[0]][gridY + math[1]]);
+        return rr.map((math) => GridCorners[gridX + math[0]][gridY + math[1]]);
     }
 }
 

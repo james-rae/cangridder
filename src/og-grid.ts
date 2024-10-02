@@ -1,6 +1,7 @@
 // TODO parse this into a nested array.  First two values are redundant
 /*
-const origDef: Array<[number, number, number, number]> = [
+// : Array<[number, number, number, number]>
+const origDef = [
     [0, 0, 40.0451, -129.853],
     [0, 1, 40.178, -129.365],
     [0, 2, 40.308, -128.874],
@@ -11877,15 +11878,13 @@ const origDef: Array<[number, number, number, number]> = [
     [94, 123, 50.2365, -26.7995],
     [94, 124, 49.8138, -26.7215],
 ];
-*/
 
-/*
-const newDog = new Array(95);
-for (let i = 0; i < 95; i++) {
-    newDog[i] = new Array(125);
+const newDog = new Array(125);
+for (let i = 0; i < 125; i++) {
+    newDog[i] = new Array(95);
 }
 origDef.forEach((row) => {
-    newDog[row[0]][row[1]] = [row[3], row[2]];
+    newDog[row[1]][row[0]] = [row[3], row[2]];
 });
 
 console.log(JSON.stringify(newDog));
