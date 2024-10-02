@@ -4,6 +4,10 @@ type Point = [number, number];
 //   gridY gridX latitude longitude
 // this array converts to a 2d array containing long-lat array points
 // GridCorners[gridX][gridY] ==> [lon, lat] for that cell corner.
+
+/**
+ * First index is GridX. Second Index is GridY. Item at that location is [lon, lat]
+ */
 const GridCorners: Array<Array<Point>> = [
     [
         [-129.853, 40.0451],
