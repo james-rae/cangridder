@@ -1,14 +1,15 @@
 type Point = [number, number];
+type Line = [Point, Point];
 
 // original data was in this format.
 //   gridY gridX latitude longitude
 // this array converts to a 2d array containing long-lat array points
-// GridCorners[gridX][gridY] ==> [lon, lat] for that cell corner.
+// GridCenters[gridX][gridY] ==> [lon, lat] for that cell center.
 
 /**
  * First index is GridX. Second Index is GridY. Item at that location is [lon, lat]
  */
-const GridCorners: Array<Array<Point>> = [
+const GridCenters: Array<Array<Point>> = [
     [
         [-129.853, 40.0451],
         [-130.0302, 40.4179],
@@ -12135,4 +12136,4 @@ const GridCorners: Array<Array<Point>> = [
         [-26.7215, 49.8138],
     ],
 ];
-export { GridCorners, Point };
+export { GridCenters,Line, Point };
