@@ -6,29 +6,28 @@ import { GridCenters, Line, Point } from './grid';
  */
 const NO_VAL = '170141000918782798866653488190622531584.00';
 
-// i think i have row and column terms swapped. canada wider than taller
-
-/**
- * Max number of rows of cells
- */
-const MAX_CELL_ROW = 125;
-
 /**
  * Max number of cols of cells
  */
-const MAX_CELL_COL = 95;
+const MAX_CELL_COL = 125;
 
 /**
  * Max number of rows of cells
  */
-const MAX_EDGE_ROW = MAX_CELL_ROW + 1;
+const MAX_CELL_ROW = 95;
 
 /**
  * Max number of cols of cells
  */
 const MAX_EDGE_COL = MAX_CELL_COL + 1;
 
+/**
+ * Max number of rows of cells
+ */
+const MAX_EDGE_ROW = MAX_CELL_ROW + 1;
+
 // clockwise
+// this is [gridCol, gridRow]. ideally gets changed to row/col after refactor.
 const rr = [
     [0, 0],
     [0, 1],
@@ -92,75 +91,72 @@ const addVector = (p1: Point, vector: Point): Point => {
 /**
  * Returns points of cell centers in a ring, starting at SW then clockwise in NE direction
  */
-const getCellCenterNE = (gridX: number, gridY: number): Array<Point> => {
-    return rr.map((math) => GridCenters[gridX + math[0]][gridY + math[1]]);
+const getCellCenterNE = (gridCol: number, gridRow: number): Array<Point> => {
+    return rr.map((math) => GridCenters[gridCol + math[0]][gridRow + math[1]]);
 };
 
 /**
  * Set of points for interpolated edges. Origin is SouthWest corner.
  */
-const GridEdges = new Array(MAX_EDGE_ROW);
+const GridEdges = new Array(MAX_EDGE_COL);
 
 // Generate the edge points via midpoint estimation.
 // Do it once here so it can be re-used in a batch
 
 // init arrays
-for (let i = 0; i < MAX_EDGE_ROW; i++) {
-    GridEdges[i] = new Array(MAX_EDGE_COL);
+for (let i = 0; i < MAX_EDGE_COL; i++) {
+    GridEdges[i] = new Array(MAX_EDGE_ROW);
 }
 
 // do middle points (easy)
-for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW - 2; iRowEdge++) {
-    for (let iColEdge = 0; iColEdge < MAX_EDGE_COL - 2; iColEdge++) {
+for (let iColEdge = 0; iColEdge < MAX_EDGE_COL - 2; iColEdge++) {
+    for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW - 2; iRowEdge++) {
         // calc the northeast midpoint between the two centers.
         // the nested loops will end up getting every edge except the outer points
 
-        const boundingCenters = getCellCenterNE(iRowEdge, iColEdge);
+        const boundingCenters = getCellCenterNE(iColEdge, iRowEdge);
         const midPoints = four.map((i) => midPoint(boundingCenters[i], boundingCenters[i + 1]));
         const crossA: Line = [midPoints[0], midPoints[2]];
         const crossB: Line = [midPoints[1], midPoints[3]];
         const centerPoint = two.map((i) => determinant(crossA, crossB, i));
 
         // +1 each coord, that is northeast corner
-        GridEdges[iRowEdge + 1][iColEdge + 1] = centerPoint;
+        GridEdges[iColEdge + 1][iRowEdge + 1] = centerPoint;
     }
 }
 
-console.log('Got past middle points');
-
 // do flat edges
-// across rows
-for (let iRowEdge = 1; iRowEdge < MAX_EDGE_ROW - 1; iRowEdge++) {
+// across cols
+for (let iColEdge = 1; iColEdge < MAX_EDGE_COL - 1; iColEdge++) {
     // 0 edge
-    const edgeStart = GridEdges[iRowEdge][1];
-    const distStart = distVector(GridEdges[iRowEdge][2], edgeStart);
-    GridEdges[iRowEdge][0] = addVector(edgeStart, distStart);
+    const edgeStart = GridEdges[iColEdge][1];
+    const distStart = distVector(GridEdges[iColEdge][2], edgeStart);
+    GridEdges[iColEdge][0] = addVector(edgeStart, distStart);
 
     // max edge
-    const edgeEnd = GridEdges[iRowEdge][MAX_EDGE_COL - 2];
-    const distEnd = distVector(GridEdges[iRowEdge][MAX_EDGE_COL - 3], edgeEnd);
-    GridEdges[iRowEdge][MAX_EDGE_COL - 1] = addVector(edgeEnd, distEnd);
+    const edgeEnd = GridEdges[iColEdge][MAX_EDGE_ROW - 2];
+    const distEnd = distVector(GridEdges[iColEdge][MAX_EDGE_ROW - 3], edgeEnd);
+    GridEdges[iColEdge][MAX_EDGE_ROW - 1] = addVector(edgeEnd, distEnd);
 }
-// across cols. because we extended rows, can do all cols, getting the corners as well
-for (let iColEdge = 0; iColEdge < MAX_EDGE_COL; iColEdge++) {
+// across rows. because we extended cols, can do all rows, getting the corners as well
+for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW; iRowEdge++) {
     // 0 edge
-    const edgeStart = GridEdges[1][iColEdge];
-    const distStart = distVector(GridEdges[2][iColEdge], edgeStart);
-    GridEdges[0][iColEdge] = addVector(edgeStart, distStart);
+    const edgeStart = GridEdges[1][iRowEdge];
+    const distStart = distVector(GridEdges[2][iRowEdge], edgeStart);
+    GridEdges[0][iRowEdge] = addVector(edgeStart, distStart);
 
     // max edge
-    const edgeEnd = GridEdges[MAX_EDGE_ROW - 2][iColEdge];
-    const distEnd = distVector(GridEdges[MAX_EDGE_ROW - 3][iColEdge], edgeEnd);
-    GridEdges[MAX_EDGE_ROW - 1][iColEdge] = addVector(edgeEnd, distEnd);
+    const edgeEnd = GridEdges[MAX_EDGE_COL - 2][iRowEdge];
+    const distEnd = distVector(GridEdges[MAX_EDGE_COL - 3][iRowEdge], edgeEnd);
+    GridEdges[MAX_EDGE_COL - 1][iRowEdge] = addVector(edgeEnd, distEnd);
 }
 
 // reduce number precision
-//parseFloat(0.9999999.toFixed(4))
 for (let xy = 0; xy < 2; xy++) {
-    for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW; iRowEdge++) {
-        for (let iColEdge = 0; iColEdge < MAX_EDGE_COL; iColEdge++) {
-            GridEdges[iRowEdge][iColEdge][xy] = parseFloat(
-                GridEdges[iRowEdge][iColEdge][xy].toFixed(4),
+    for (let iColEdge = 0; iColEdge < MAX_EDGE_COL; iColEdge++) {
+        for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW; iRowEdge++) {
+            GridEdges[iColEdge][iRowEdge][xy] = parseFloat(
+                GridEdges[iColEdge][iRowEdge][xy].toFixed(4),
             );
         }
     }
@@ -169,17 +165,17 @@ for (let xy = 0; xy < 2; xy++) {
 /**
  * Returns points of cell boundary in a ring
  */
-const getCellBoundary = (gridX: number, gridY: number): Array<Point> => {
-    return rr.map((math) => GridEdges[gridX + math[0]][gridY + math[1]]);
+const getCellBoundary = (gridCol: number, gridRow: number): Array<Point> => {
+    return rr.map((math) => GridEdges[gridCol + math[0]][gridRow + math[1]]);
 };
 
-const gjCell = (gridX: number, gridY: number, value: number): any => {
+const gjCell = (gridCol: number, gridRow: number, value: number): any => {
     return {
         type: 'Feature',
-        properties: { cellval: value, keyval: `Row ${gridX} Col ${gridY}` },
+        properties: { cellval: value, keyval: `Row ${gridRow} Col ${gridCol}` },
         geometry: {
             type: 'Polygon',
-            coordinates: [getCellBoundary(gridX, gridY)],
+            coordinates: [getCellBoundary(gridCol, gridRow)],
         },
     };
 };
@@ -198,7 +194,7 @@ async function parser(path: string) {
     /**
      * Array of GeoJSON features we have generated
      */
-    const featBuffer: Array<any> = new Array(MAX_CELL_COL * MAX_CELL_ROW);
+    const featBuffer: Array<any> = new Array(MAX_CELL_ROW * MAX_CELL_COL);
 
     /**
      * Tracks where we're inserting in the buffer
@@ -206,37 +202,37 @@ async function parser(path: string) {
     let bufferIdx = 0;
 
     /**
-     * Grid row we are parsing
-     */
-    let gridRow = 0;
-
-    /**
-     * Grid column we are parsing
+     * Grid col we are parsing
      */
     let gridCol = 0;
 
+    /**
+     * Grid rowumn we are parsing
+     */
+    let gridRow = 0;
+
     inDataLines.forEach((inLine, lineNum) => {
         if (lineNum < 5) {
-            // file header row
+            // file header line
             if (lineNum === 1 && inLine !== '125 95') {
                 // things prob gonna error spectacularly, give a little context.
                 console.log('HOL UP! File header indicates grid is in an unexpected layout.');
             }
         } else {
-            // data row
+            // data line
             const trimData = inLine.trim();
 
             if (trimData && trimData !== NO_VAL) {
                 // make a geojson
-                const gj = gjCell(gridRow, gridCol, parseFloat(trimData));
+                const gj = gjCell(gridCol, gridRow, parseFloat(trimData));
                 featBuffer[bufferIdx] = gj;
                 bufferIdx++;
             }
 
-            gridRow++;
-            if (gridRow >= MAX_CELL_ROW) {
-                gridRow = 0;
-                gridCol++;
+            gridCol++;
+            if (gridCol >= MAX_CELL_COL) {
+                gridCol = 0;
+                gridRow++;
             }
         }
     });
