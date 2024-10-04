@@ -18,11 +18,11 @@ const MAX_COL = 95;
 
 // clockwise
 const rr = [
+    [-1, -1],
+    [-1, 0],
     [0, 0],
-    [0, 1],
-    [1, 1],
-    [1, 0],
-    [0, 0],
+    [0, -1],
+    [-1, -1],
 ];
 
 const getCell = (gridX: number, gridY: number): Array<Point> => {
@@ -81,6 +81,8 @@ async function parser(path: string) {
      */
     let gridCol = 0;
 
+    let dogCount = 0;
+
     inDataLines.forEach((inLine, lineNum) => {
         if (lineNum < 5) {
             // file header row
@@ -94,7 +96,10 @@ async function parser(path: string) {
 
             if (trimData !== NO_VAL) {
                 // temporary last-edge checker
-                if (gridCol < MAX_COL - 1 && gridRow < MAX_ROW - 1) {
+                if (gridCol === 0 || gridRow === 0) {
+                    // unable to make a square, no -1 coord to steal
+                    dogCount++;
+                } else {
                     // make a geojson
                     const gj = gjCell(gridRow, gridCol, parseFloat(trimData));
                     featBuffer[bufferIdx] = gj;
@@ -120,6 +125,7 @@ async function parser(path: string) {
 
     await fs.promises.writeFile(outfileMain, JSON.stringify(finalGeoJSON), 'utf8');
 
+    console.log('Dog Count = ' + dogCount);
     console.log('Done Thanks');
 }
 
