@@ -34,7 +34,7 @@ const MAX_EDGE_ROW = MAX_CELL_ROW + 1;
 
 // clockwise
 // this is [gridCol, gridRow]. ideally gets changed to row/col after refactor.
-const rr = [
+const rr: Array<[number, number]> = [
     [0, 0],
     [0, 1],
     [1, 1],
@@ -104,7 +104,7 @@ const getCellCenterNE = (gridCol: number, gridRow: number): Array<Point> => {
 /**
  * Set of points for interpolated edges. Origin is SouthWest corner.
  */
-const GridEdges = new Array(MAX_EDGE_COL);
+const GridEdges: Array<Array<Point>> = new Array(MAX_EDGE_COL);
 
 // Generate the edge points via midpoint estimation.
 // Do it once here so it can be re-used in a batch
@@ -124,7 +124,7 @@ for (let iColEdge = 0; iColEdge < MAX_EDGE_COL - 2; iColEdge++) {
         const midPoints = four.map((i) => midPoint(boundingCenters[i], boundingCenters[i + 1]));
         const crossA: Line = [midPoints[0], midPoints[2]];
         const crossB: Line = [midPoints[1], midPoints[3]];
-        const centerPoint = two.map((i) => determinant(crossA, crossB, i));
+        const centerPoint = two.map((i) => determinant(crossA, crossB, i)) as Point;
 
         // +1 each coord, that is northeast corner
         GridEdges[iColEdge + 1][iRowEdge + 1] = centerPoint;
@@ -157,6 +157,15 @@ for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW; iRowEdge++) {
     GridEdges[MAX_EDGE_COL - 1][iRowEdge] = addVector(edgeEnd, distEnd);
 }
 
+// manual fix
+// our edge estimation is not great. These 4 cells (5 edges) are typically the only ones with data.
+// fixed co-ords calculated with MSPaint line tool + ramp coord bar
+GridEdges[47][MAX_EDGE_ROW - 1] = [-67.6082, 83.6677];
+GridEdges[48][MAX_EDGE_ROW - 1] = [-64.5135, 83.3292];
+GridEdges[49][MAX_EDGE_ROW - 1] = [-61.7811, 82.9821];
+GridEdges[50][MAX_EDGE_ROW - 1] = [-59.2625, 82.6151];
+GridEdges[51][MAX_EDGE_ROW - 1] = [-57.036, 82.2446];
+
 // reduce number precision
 for (let xy = 0; xy < 2; xy++) {
     for (let iColEdge = 0; iColEdge < MAX_EDGE_COL; iColEdge++) {
@@ -175,10 +184,23 @@ const getCellBoundary = (gridCol: number, gridRow: number): Array<Point> => {
     return rr.map((math) => GridEdges[gridCol + math[0]][gridRow + math[1]]);
 };
 
+/**
+ * Create a GeoJSON feature. Will be a poly square plus some properties/attributes
+ * @param gridCol
+ * @param gridRow
+ * @param value
+ * @returns
+ */
 const gjCell = (gridCol: number, gridRow: number, value: number): any => {
+    const center = GridCenters[gridCol][gridRow];
     return {
         type: 'Feature',
-        properties: { cellval: value, keyval: `Row ${gridRow} Col ${gridCol}` },
+        properties: {
+            cellval: value,
+            keyval: `R${gridRow}C${gridCol}`,
+            lat: center[1],
+            lon: center[0],
+        },
         geometry: {
             type: 'Polygon',
             coordinates: [getCellBoundary(gridCol, gridRow)],
@@ -186,6 +208,10 @@ const gjCell = (gridCol: number, gridRow: number, value: number): any => {
     };
 };
 
+/**
+ * Generate one GeoJSON file
+ * @param path path to source GRD file
+ */
 async function parser(path: string) {
     /**
      * Sauce file
@@ -213,7 +239,7 @@ async function parser(path: string) {
     let gridCol = 0;
 
     /**
-     * Grid rowumn we are parsing
+     * Grid row we are parsing
      */
     let gridRow = 0;
 
