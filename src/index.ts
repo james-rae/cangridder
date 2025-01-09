@@ -1,5 +1,11 @@
 import fs from 'fs';
+import JSZip from 'jszip';
 import { GridCenters, Line, Point } from './grid';
+
+/**
+ * Magic flag to zip our files or not
+ */
+const ZIP_OUTPUT = true;
 
 /**
  * Magic value to indicate there is no value
@@ -242,12 +248,32 @@ async function parser(path: string) {
         features: featBuffer.filter(Boolean),
     };
 
+    const finalAsString = JSON.stringify(finalGeoJSON);
+
     // write out stuff to file
-    const outfileMain = path.slice(0, path.length - 3) + 'json';
+    const pathPre = path.slice(0, path.length - 3);
 
-    await fs.promises.writeFile(outfileMain, JSON.stringify(finalGeoJSON), 'utf8');
+    const filename = pathPre.split('/').pop() || 'mystery';
 
-    console.log('Done Thanks: ' + outfileMain);
+    if (ZIP_OUTPUT) {
+        // make a zip container with our geojson guts
+        const zipper = new JSZip();
+        zipper.file(filename + 'json', finalAsString);
+
+        // blast out compressed file as a stream, and pipe it to a file
+        const zipStream = zipper.generateNodeStream({
+            type: 'nodebuffer',
+            streamFiles: true,
+            compression: 'DEFLATE',
+        });
+
+        const writeStream = fs.createWriteStream(pathPre + 'zip');
+        zipStream.pipe(writeStream);
+    } else {
+        await fs.promises.writeFile(pathPre + 'json', finalAsString, 'utf8');
+    }
+
+    console.log('Done Thanks: ' + filename);
 }
 
 async function parseAll(files: Array<string>) {
