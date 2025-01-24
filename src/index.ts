@@ -8,6 +8,19 @@ import { GridCenters, Line, Point } from './grid';
 const ZIP_OUTPUT = true;
 
 /**
+ * Magic flag to notate a file as the "current year".
+ * This will add detail page link fields, and create an english and french file.
+ * Exclude the file extension
+ */
+const CURR_YEAR_FILE = 't202213';
+
+/**
+ * Magic setting for the URL prefix of detail links of the current year file.
+ * Should be the URL up to but excluding the ?
+ */
+const DETAIL_URL_PREFIX = 'https://indicators-map.canada.ca/App/Detail';
+
+/**
  * Magic value to indicate there is no value
  */
 const NO_VAL = '170141000918782798866653488190622531584.00';
@@ -209,6 +222,32 @@ const gjCell = (gridCol: number, gridRow: number, value: number): any => {
 };
 
 /**
+ * Writes a file
+ * @param pathPrefix the file path, including file name, but excluding the dot+extension
+ * @param filename the name of the file, excluding the dot+extension
+ * @param dataDomp file contents in string format
+ */
+async function writeFile(pathPrefix: string, filename: string, dataDomp: string) {
+    if (ZIP_OUTPUT) {
+        // make a zip container with our geojson guts
+        const zipper = new JSZip();
+        zipper.file(filename + '.json', dataDomp);
+
+        // blast out compressed file as a stream, and pipe it to a file
+        const zipStream = zipper.generateNodeStream({
+            type: 'nodebuffer',
+            streamFiles: true,
+            compression: 'DEFLATE',
+        });
+
+        const writeStream = fs.createWriteStream(pathPrefix + '.zip');
+        zipStream.pipe(writeStream);
+    } else {
+        await fs.promises.writeFile(pathPrefix + '.json', dataDomp, 'utf8');
+    }
+}
+
+/**
  * Generate one GeoJSON file
  * @param path path to source GRD file
  */
@@ -274,29 +313,37 @@ async function parser(path: string) {
         features: featBuffer.filter(Boolean),
     };
 
-    const finalAsString = JSON.stringify(finalGeoJSON);
-
     // write out stuff to file
-    const pathPre = path.slice(0, path.length - 3);
+    const pathPre = path.slice(0, path.length - 4);
 
     const filename = pathPre.split('/').pop() || 'mystery';
 
-    if (ZIP_OUTPUT) {
-        // make a zip container with our geojson guts
-        const zipper = new JSZip();
-        zipper.file(filename + 'json', finalAsString);
-
-        // blast out compressed file as a stream, and pipe it to a file
-        const zipStream = zipper.generateNodeStream({
-            type: 'nodebuffer',
-            streamFiles: true,
-            compression: 'DEFLATE',
+    if (filename === CURR_YEAR_FILE) {
+        // enhance with detail page fields
+        finalGeoJSON.features.forEach((f) => {
+            f.properties.DETAIL_FIELD_TOKEN =
+                DETAIL_URL_PREFIX +
+                '?id=' +
+                f.properties.keyval +
+                '&GoCTemplateCulture=DETAIL_LANG_TOKEN';
         });
 
-        const writeStream = fs.createWriteStream(pathPre + 'zip');
-        zipStream.pipe(writeStream);
+        const tokenString = JSON.stringify(finalGeoJSON);
+
+        // english
+        const enFinal = tokenString
+            .replaceAll('DETAIL_FIELD_TOKEN', 'E_DetailPageURL')
+            .replaceAll('DETAIL_LANG_TOKEN', 'en-CA');
+        await writeFile(pathPre + '.en', filename, enFinal);
+
+        // french
+        const frFinal = tokenString
+            .replaceAll('DETAIL_FIELD_TOKEN', 'F_DetailPageURL')
+            .replaceAll('DETAIL_LANG_TOKEN', 'fr-CA');
+        await writeFile(pathPre + '.fr', filename, frFinal);
     } else {
-        await fs.promises.writeFile(pathPre + 'json', finalAsString, 'utf8');
+        const finalAsString = JSON.stringify(finalGeoJSON);
+        await writeFile(pathPre, filename, finalAsString);
     }
 
     console.log('Done Thanks: ' + filename);
