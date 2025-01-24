@@ -12,13 +12,16 @@ const ZIP_OUTPUT = true;
  * This will add detail page link fields, and create an english and french file.
  * Exclude the file extension
  */
-const CURR_YEAR_FILE = 't202213';
+const CURR_YEAR_FILE = 't202313';
 
 /**
  * Magic setting for the URL prefix of detail links of the current year file.
  * Should be the URL up to but excluding the ?
+ * Dev: https://indicators-map.dev.ec.gc.ca/App/Detail
+ * QA: https://indicators-map.qa.ec.gc.ca/App/Detail
+ * Prod: https://indicators-map.canada.ca/App/Detail
  */
-const DETAIL_URL_PREFIX = 'https://indicators-map.canada.ca/App/Detail';
+const DETAIL_URL_PREFIX = 'https://indicators-map.dev.ec.gc.ca/App/Detail';
 
 /**
  * Magic value to indicate there is no value
@@ -322,10 +325,11 @@ async function parser(path: string) {
         // enhance with detail page fields
         finalGeoJSON.features.forEach((f) => {
             f.properties.DETAIL_FIELD_TOKEN =
+                '<a href="' +
                 DETAIL_URL_PREFIX +
                 '?id=' +
                 f.properties.keyval +
-                '&GoCTemplateCulture=DETAIL_LANG_TOKEN';
+                '&GoCTemplateCulture=DETAIL_LANG_TOKEN" target="_blank">TEXT_LANG_TOKEN</a>';
         });
 
         const tokenString = JSON.stringify(finalGeoJSON);
@@ -333,13 +337,15 @@ async function parser(path: string) {
         // english
         const enFinal = tokenString
             .replaceAll('DETAIL_FIELD_TOKEN', 'E_DetailPageURL')
-            .replaceAll('DETAIL_LANG_TOKEN', 'en-CA');
+            .replaceAll('DETAIL_LANG_TOKEN', 'en-CA')
+            .replaceAll('TEXT_LANG_TOKEN', 'More information');
         await writeFile(pathPre + '.en', filename, enFinal);
 
         // french
         const frFinal = tokenString
             .replaceAll('DETAIL_FIELD_TOKEN', 'F_DetailPageURL')
-            .replaceAll('DETAIL_LANG_TOKEN', 'fr-CA');
+            .replaceAll('DETAIL_LANG_TOKEN', 'fr-CA')
+            .replaceAll('TEXT_LANG_TOKEN', "Plus d'information");
         await writeFile(pathPre + '.fr', filename, frFinal);
     } else {
         const finalAsString = JSON.stringify(finalGeoJSON);
@@ -357,5 +363,8 @@ async function parseAll(files: Array<string>) {
     }
 }
 
-const batch = ['./guts/t202213.grd'];
+// currently using file format t<year>13.grd
+const yearGen = new Array(13).fill(2011);
+const batch = yearGen.map((start, i) => `./grids/t${start + i}13.grd`);
+
 parseAll(batch);
