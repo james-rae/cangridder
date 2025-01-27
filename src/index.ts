@@ -1,6 +1,6 @@
-import fs from 'fs';
 import { fileToLines, writeFile } from './file';
 import { GridCenters, Line, Point } from './grid';
+import { parseTrend } from './trend';
 
 /**
  * Magic flag to zip our files or not
@@ -337,4 +337,7 @@ const yearGen = new Array(13).fill(2011);
 const batch = yearGen.map((start, i) => `./grids/t${start + i}13.grd`);
 const trendFile = './grids/tmean_annual_trends.csv';
 
-parseAll(batch);
+parseTrend(trendFile).then((trendNugget) => {
+    console.log('I found this many trend nuggets: ' + trendNugget.size);
+    //  parseAll(batch);
+});
