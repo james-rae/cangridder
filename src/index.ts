@@ -207,13 +207,20 @@ const getCellBoundary = (gridCol: number, gridRow: number): Array<Point> => {
  * @param value
  * @returns
  */
-const gjCell = (gridCol: number, gridRow: number, value: number): any => {
+const gjCell = (
+    gridCol: number,
+    gridRow: number,
+    keyval: string,
+    cellValue: number,
+    trendValue: number,
+): any => {
     const center = GridCenters[gridCol][gridRow];
     return {
         type: 'Feature',
         properties: {
-            cellval: value,
-            keyval: `R${gridRow}C${gridCol}`,
+            keyval: keyval,
+            cellval: cellValue,
+            trend: trendValue,
             lat: center[1],
             lon: center[0],
         },
@@ -228,7 +235,7 @@ const gjCell = (gridCol: number, gridRow: number, value: number): any => {
  * Generate one GeoJSON file
  * @param path path to source GRD file
  */
-async function parser(path: string) {
+async function parser(path: string, trendData: Map<string, number>) {
     /**
      * Sauce file split into file lines (array of strings)
      */
@@ -266,10 +273,17 @@ async function parser(path: string) {
             const trimData = inLine.trim();
 
             if (trimData && trimData !== NO_VAL) {
-                // make a geojson
-                const gj = gjCell(gridCol, gridRow, parseFloat(trimData));
-                featBuffer[bufferIdx] = gj;
-                bufferIdx++;
+                const keyval = `R${gridRow}C${gridCol}`;
+
+                // only make squares with trend data
+                if (trendData.has(keyval)) {
+                    const trendVal = trendData.get(keyval)!;
+
+                    // make a geojson
+                    const gj = gjCell(gridCol, gridRow, keyval, parseFloat(trimData), trendVal);
+                    featBuffer[bufferIdx] = gj;
+                    bufferIdx++;
+                }
             }
 
             gridCol++;
@@ -324,11 +338,11 @@ async function parser(path: string) {
     console.log('Done Thanks: ' + filename);
 }
 
-async function parseAll(files: Array<string>) {
+async function parseAll(files: Array<string>, trendData: Map<string, number>) {
     if (files.length > 0) {
         const file = files.pop()!;
-        await parser(file);
-        await parseAll(files);
+        await parser(file, trendData);
+        await parseAll(files, trendData);
     }
 }
 
@@ -338,6 +352,5 @@ const batch = yearGen.map((start, i) => `./grids/t${start + i}13.grd`);
 const trendFile = './grids/tmean_annual_trends.csv';
 
 parseTrend(trendFile).then((trendNugget) => {
-    console.log('I found this many trend nuggets: ' + trendNugget.size);
-    //  parseAll(batch);
+    parseAll(batch, trendNugget);
 });

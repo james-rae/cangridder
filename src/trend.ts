@@ -7,7 +7,7 @@ import { GridCenters } from './grid';
  * @param path
  * @returns
  */
-const parseTrend = async (path: string): Promise<Map<string, string>> => {
+const parseTrend = async (path: string): Promise<Map<string, number>> => {
     // read CSV
     const csvLines = await fileToLines(path);
 
@@ -21,13 +21,13 @@ const parseTrend = async (path: string): Promise<Map<string, string>> => {
     );
     const cellMap: Map<string, string> = new Map(cellMapFeeder);
 
-    const finalFeeder = csvLines.map((csvLine, lineNum): [string, string] => {
+    const finalFeeder = csvLines.map((csvLine, lineNum): [string, number] => {
         if (lineNum === 0) {
             // header. return dummynugget
-            return ['NOTHING', 'BURGER'];
+            return ['NOTHING', 0];
         } else if (csvLine.trim() === '') {
             // empty line
-            return ['EMPTY' + lineNum, 'BURGER'];
+            return ['EMPTY' + lineNum, 0];
         } else {
             const csvCols = csvLine.split(',');
             const lat = csvCols[1];
@@ -37,7 +37,7 @@ const parseTrend = async (path: string): Promise<Map<string, string>> => {
             // find what the cell id is for this latlon
             const cellKey = cellMap.get(lon + '~' + lat);
             if (cellKey) {
-                return [cellKey, trend];
+                return [cellKey, parseFloat(trend)];
             } else {
                 throw new Error(
                     'Lat Lon in trend file didnt match to official lat lon: ' + lat + ' , ' + lon,

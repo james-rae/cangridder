@@ -26,6 +26,12 @@ const yearGen = new Array(20).fill(2004);
 const batch = yearGen.map((start, i) => `./grids/grid${start + i}.grd`);
 ```
 
+There also needs to be a trend data `csv` file path provided to the `trendFile` variable.
+
+```js
+const trendFile = './grids/tmean_annual_trends.csv';
+```
+
 ### Zipped Output
 
 As is, the GeoJSON files will be zipped. To just output text files, change the var `ZIP_OUTPUT` to `false` at the top of `index.ts`.
