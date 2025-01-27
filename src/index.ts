@@ -1,5 +1,5 @@
 import fs from 'fs';
-import JSZip from 'jszip';
+import { fileToLines, writeFile } from './file';
 import { GridCenters, Line, Point } from './grid';
 
 /**
@@ -225,45 +225,14 @@ const gjCell = (gridCol: number, gridRow: number, value: number): any => {
 };
 
 /**
- * Writes a file
- * @param pathPrefix the file path, including file name, but excluding the dot+extension
- * @param filename the name of the file, excluding the dot+extension
- * @param dataDomp file contents in string format
- */
-async function writeFile(pathPrefix: string, filename: string, dataDomp: string) {
-    if (ZIP_OUTPUT) {
-        // make a zip container with our geojson guts
-        const zipper = new JSZip();
-        zipper.file(filename + '.json', dataDomp);
-
-        // blast out compressed file as a stream, and pipe it to a file
-        const zipStream = zipper.generateNodeStream({
-            type: 'nodebuffer',
-            streamFiles: true,
-            compression: 'DEFLATE',
-        });
-
-        const writeStream = fs.createWriteStream(pathPrefix + '.zip');
-        zipStream.pipe(writeStream);
-    } else {
-        await fs.promises.writeFile(pathPrefix + '.json', dataDomp, 'utf8');
-    }
-}
-
-/**
  * Generate one GeoJSON file
  * @param path path to source GRD file
  */
 async function parser(path: string) {
     /**
-     * Sauce file
-     */
-    const inDataStr = await fs.promises.readFile(path, 'utf8');
-
-    /**
      * Sauce file split into file lines (array of strings)
      */
-    const inDataLines = inDataStr.split(/\r?\n/);
+    const inDataLines = await fileToLines(path);
 
     /**
      * Array of GeoJSON features we have generated
@@ -339,17 +308,17 @@ async function parser(path: string) {
             .replaceAll('DETAIL_FIELD_TOKEN', 'E_DetailPageURL')
             .replaceAll('DETAIL_LANG_TOKEN', 'en-CA')
             .replaceAll('TEXT_LANG_TOKEN', 'More information');
-        await writeFile(pathPre + '.en', filename, enFinal);
+        await writeFile(pathPre + '.en', filename, enFinal, ZIP_OUTPUT);
 
         // french
         const frFinal = tokenString
             .replaceAll('DETAIL_FIELD_TOKEN', 'F_DetailPageURL')
             .replaceAll('DETAIL_LANG_TOKEN', 'fr-CA')
             .replaceAll('TEXT_LANG_TOKEN', "Plus d'information");
-        await writeFile(pathPre + '.fr', filename, frFinal);
+        await writeFile(pathPre + '.fr', filename, frFinal, ZIP_OUTPUT);
     } else {
         const finalAsString = JSON.stringify(finalGeoJSON);
-        await writeFile(pathPre, filename, finalAsString);
+        await writeFile(pathPre, filename, finalAsString, ZIP_OUTPUT);
     }
 
     console.log('Done Thanks: ' + filename);
@@ -366,5 +335,6 @@ async function parseAll(files: Array<string>) {
 // currently using file format t<year>13.grd
 const yearGen = new Array(13).fill(2011);
 const batch = yearGen.map((start, i) => `./grids/t${start + i}13.grd`);
+const trendFile = './grids/tmean_annual_trends.csv';
 
 parseAll(batch);
