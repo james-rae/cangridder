@@ -2,17 +2,27 @@ import { fileToLines, writeFile } from './file';
 import { GridCenters, Line, Point } from './grid';
 import { parseTrend } from './trend';
 
+type GrdMetadata = {
+    /**
+     * File path
+     */
+    f: string;
+    /**
+     * File year
+     */
+    y: number;
+};
+
 /**
  * Magic flag to zip our files or not
  */
 const ZIP_OUTPUT = true;
 
 /**
- * Magic flag to notate a file as the "current year".
+ * Magic flag to notate which year is the "current year".
  * This will add detail page link fields, and create an english and french file.
- * Exclude the file extension
  */
-const CURR_YEAR_FILE = 't202313';
+const CURR_YEAR = 2023;
 
 /**
  * Magic setting for the URL prefix of detail links of the current year file.
@@ -213,6 +223,7 @@ const gjCell = (
     keyval: string,
     cellValue: number,
     trendValue: number,
+    year: number,
 ): any => {
     const center = GridCenters[gridCol][gridRow];
     return {
@@ -221,6 +232,7 @@ const gjCell = (
             keyval: keyval,
             cellval: cellValue,
             trend: trendValue,
+            year: year,
             lat: center[1],
             lon: center[0],
         },
@@ -235,11 +247,11 @@ const gjCell = (
  * Generate one GeoJSON file
  * @param path path to source GRD file
  */
-async function parser(path: string, trendData: Map<string, number>) {
+async function parser(fileData: GrdMetadata, trendData: Map<string, number>) {
     /**
      * Sauce file split into file lines (array of strings)
      */
-    const inDataLines = await fileToLines(path);
+    const inDataLines = await fileToLines(fileData.f);
 
     /**
      * Array of GeoJSON features we have generated
@@ -280,7 +292,14 @@ async function parser(path: string, trendData: Map<string, number>) {
                     const trendVal = trendData.get(keyval)!;
 
                     // make a geojson
-                    const gj = gjCell(gridCol, gridRow, keyval, parseFloat(trimData), trendVal);
+                    const gj = gjCell(
+                        gridCol,
+                        gridRow,
+                        keyval,
+                        parseFloat(trimData),
+                        trendVal,
+                        fileData.y,
+                    );
                     featBuffer[bufferIdx] = gj;
                     bufferIdx++;
                 }
@@ -300,11 +319,11 @@ async function parser(path: string, trendData: Map<string, number>) {
     };
 
     // write out stuff to file
-    const pathPre = path.slice(0, path.length - 4);
+    const pathPre = fileData.f.slice(0, fileData.f.length - 4);
 
     const filename = pathPre.split('/').pop() || 'mystery';
 
-    if (filename === CURR_YEAR_FILE) {
+    if (fileData.y === CURR_YEAR) {
         // enhance with detail page fields
         finalGeoJSON.features.forEach((f) => {
             f.properties.DETAIL_FIELD_TOKEN =
@@ -338,7 +357,7 @@ async function parser(path: string, trendData: Map<string, number>) {
     console.log('Done Thanks: ' + filename);
 }
 
-async function parseAll(files: Array<string>, trendData: Map<string, number>) {
+async function parseAll(files: Array<GrdMetadata>, trendData: Map<string, number>) {
     if (files.length > 0) {
         const file = files.pop()!;
         await parser(file, trendData);
@@ -347,8 +366,11 @@ async function parseAll(files: Array<string>, trendData: Map<string, number>) {
 }
 
 // currently using file format t<year>13.grd
-const yearGen = new Array(13).fill(2011);
-const batch = yearGen.map((start, i) => `./grids/t${start + i}13.grd`);
+const yearGen: Array<number> = new Array(13).fill(2011);
+const batch = yearGen
+    .map((start, i) => start + i)
+    .map((year) => ({ f: `./grids/t${year}13.grd`, y: year }));
+
 const trendFile = './grids/tmean_annual_trends.csv';
 
 parseTrend(trendFile).then((trendNugget) => {
