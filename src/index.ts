@@ -289,7 +289,8 @@ async function parser(fileData: GrdMetadata, trendData: Map<string, number>) {
 
                 // only make squares with trend data
                 if (trendData.has(keyval)) {
-                    const trendVal = trendData.get(keyval)!;
+                    let trendVal = trendData.get(keyval)!;
+                    trendVal = +trendVal.toFixed(2); // this fancy notation will drop trailing zeros. I.e. you'll get `1` instead of `1.00`
 
                     // make a geojson
                     const gj = gjCell(

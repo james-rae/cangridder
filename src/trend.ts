@@ -32,7 +32,7 @@ const parseTrend = async (path: string): Promise<Map<string, number>> => {
             const csvCols = csvLine.split(',');
             const lat = csvCols[1];
             const lon = csvCols[2];
-            const trend = csvCols[6];
+            const trend = csvCols[5];
 
             // find what the cell id is for this latlon
             const cellKey = cellMap.get(lon + '~' + lat);
