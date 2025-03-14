@@ -1,6 +1,7 @@
 import { fileToLines, writeFile } from './file';
 import { GridCenters, Line, Point } from './grid';
 import { parseTrend } from './trend';
+import { lambertProj, latLongProj, projectGeoJson } from './proj';
 
 type GrdMetadata = {
     /**
@@ -192,13 +193,24 @@ GridEdges[49][MAX_EDGE_ROW - 1] = [-61.7811, 82.9821];
 GridEdges[50][MAX_EDGE_ROW - 1] = [-59.2625, 82.6151];
 GridEdges[51][MAX_EDGE_ROW - 1] = [-57.036, 82.2446];
 
-// reduce number precision
+// convert to Lambert
+for (let iColEdge = 0; iColEdge < MAX_EDGE_COL; iColEdge++) {
+    for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW; iRowEdge++) {
+        const fakeGeoJson = {
+            type: 'Point',
+            coordinates: GridEdges[iColEdge][iRowEdge],
+        };
+
+        const lambertGeoJson = projectGeoJson(fakeGeoJson, latLongProj, lambertProj);
+        GridEdges[iColEdge][iRowEdge] = lambertGeoJson.coordinates;
+    }
+}
+
+// reduce number precision (lambert, which is meters, chop the decimal off)
 for (let xy = 0; xy < 2; xy++) {
     for (let iColEdge = 0; iColEdge < MAX_EDGE_COL; iColEdge++) {
         for (let iRowEdge = 0; iRowEdge < MAX_EDGE_ROW; iRowEdge++) {
-            GridEdges[iColEdge][iRowEdge][xy] = parseFloat(
-                GridEdges[iColEdge][iRowEdge][xy].toFixed(4),
-            );
+            GridEdges[iColEdge][iRowEdge][xy] = Math.floor(GridEdges[iColEdge][iRowEdge][xy]);
         }
     }
 }
@@ -316,6 +328,12 @@ async function parser(fileData: GrdMetadata, trendData: Map<string, number>) {
 
     const finalGeoJSON = {
         type: 'FeatureCollection',
+        crs: {
+            type: 'name',
+            properties: {
+                name: 'urn:ogc:def:crs:EPSG::3978',
+            },
+        },
         features: featBuffer.filter(Boolean),
     };
 
