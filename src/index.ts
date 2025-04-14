@@ -371,9 +371,6 @@ async function parser(fileData: GrdMetadata, trendData: Map<string, number>) {
         await writeFile(pathPre + '.fr', filename, frFinal, ZIP_OUTPUT);
 
         // make attribute files to feed Data page table
-        // TODO if this data should not have the Detail Field hyperlinks, then move this logic to the start of the if block.
-        //      generate these files before injecting the new field. Can change the data converter method to accept the
-        //      geoJson object as is, no need to stringify on the input
         await writeFile(pathPre + '.data.fr', filename, toEsriData(frFinal, true), false);
         await writeFile(pathPre + '.data.en', filename, toEsriData(enFinal, false), false);
     } else {
