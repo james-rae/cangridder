@@ -43,7 +43,9 @@ As is, the GeoJSON files will be zipped. To just output text files, change the v
 
 ### Current Year Enhancements
 
-The "current year" layer typically wants an extra field containing the URL to the detail page. It will also generate two output files for the dataset, an English and French one. There are a few settings that can be tweaked, all at the top of `index.ts`.
+The "current year" layer typically wants an extra field containing the URL to the detail page. It will also generate two output files for the dataset, an English and French one. And a new bonus, two "attribute only" files to feed the Data pages. These files contain a JSON object that mimics an attribute query result from an ArcGIS server, one for each language.
+
+There are a few settings that can be tweaked, all at the top of `index.ts`.
 
 `CURR_YEAR` contains the year of the grd source that is the current year. Something in the `batch` array should match it (via the `y` property of one of the objects). To have no file be the current year, just set this to 0.
 
