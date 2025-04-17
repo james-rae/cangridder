@@ -6,7 +6,6 @@
 // writing nonsense elsewhere and computer loves to do it, trust me I asked.
 
 const frAlias = {
-    keyval: '',
     cellval: 'Écart de température par rapport à la valeur de référence 1961-1990 en °C',
     trend: 'Tendance des changements de température depuis 1948 en °C',
     year: 'Année',
@@ -16,7 +15,6 @@ const frAlias = {
 };
 
 const enAlias = {
-    keyval: '',
     cellval: 'Temperature departure from the 1961-1990 reference value (°C)',
     trend: 'Temperature change trend since 1948 (°C)',
     year: 'Report year',
@@ -28,14 +26,10 @@ const enAlias = {
 const toEsriData = (geoJsonAsString: string, french: boolean): string => {
     const geoJson = JSON.parse(geoJsonAsString);
 
-    // TODO not sure if the method that eats this data requires the actual field aliases here or if thats hardcoded in the page.
-    //      can hardcode here unless an even lazier solution presents itself
-
     const domparoo = {
         displayFieldName: 'cellval',
         fieldAliases: french ? frAlias : enAlias,
         fields: [
-            { name: 'keyval', type: 'esriFieldTypeString', length: 20 },
             { name: 'cellval', type: 'esriFieldTypeDouble' },
             { name: 'trend', type: 'esriFieldTypeDouble' },
             { name: 'year', type: 'esriFieldTypeDouble' },
@@ -47,9 +41,13 @@ const toEsriData = (geoJsonAsString: string, french: boolean): string => {
                 length: 500,
             },
         ],
-        features: geoJson.features.map((gjf: any) => ({
-            attributes: gjf.properties,
-        })),
+        features: geoJson.features.map((gjf: any) => {
+            // don't want to show the keyval field. smite it!
+            delete gjf.properties.keyval;
+            return {
+                attributes: gjf.properties,
+            };
+        }),
     };
 
     return JSON.stringify(domparoo);
